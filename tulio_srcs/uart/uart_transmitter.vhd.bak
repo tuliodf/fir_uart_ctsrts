@@ -1,0 +1,204 @@
+-------------------------------------------------------------------------------
+-- uart_transmitter.vhd
+--
+-- Transmite frames UART 8N1 (1 start bit, 8 bits de dado LSB-first,
+-- 1 stop bit).
+--
+-- Flow control: antes de iniciar um frame, verifica uart_cts_n (entrada,
+-- ativo baixo). Se o peer não estiver "clear to send" (uart_cts_n = '1'),
+-- o transmissor aguarda em idle_s até a linha ser liberada -- não perde o
+-- pedido de envio, só atrasa o início do frame.
+--
+-- Interface:
+--   send      : pulso de 1 ciclo pedindo o envio de data_in
+--   busy      : '1' enquanto um frame está sendo transmitido (inclui o
+--               tempo de espera por CTS)
+--   tx        : linha serial de saída (idle = '1')
+-------------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity uart_transmitter is
+  generic (CLK_FREQ_HZ : integer := 50_000_000;
+           BAUD_RATE   : integer := 57_600);
+  port (clock      : in  std_logic;
+        reset_n    : in  std_logic;
+        data_in    : in  std_logic_vector(7 downto 0);
+        send       : in  std_logic;                    -- pulso de 1 ciclo
+        uart_cts_n : in  std_logic := '0';               -- '0' = peer liberou envio
+        tx         : out std_logic;
+        busy       : out std_logic);
+end entity uart_transmitter;
+
+architecture rtl of uart_transmitter is
+
+  constant CLKS_PER_BIT : integer := CLK_FREQ_HZ / BAUD_RATE;
+
+  type state_t is (idle_s, wait_cts_s, start_s, bit0_s, bit1_s, bit2_s,
+                    bit3_s, bit4_s, bit5_s, bit6_s, bit7_s, stop_s);
+  signal state : state_t := idle_s;
+
+  signal shift_reg : std_logic_vector(7 downto 0);
+  signal bit_timer  : integer range 0 to CLKS_PER_BIT - 1 := 0;
+  signal tx_s       : std_logic := '1';
+  signal busy_s      : std_logic := '0';
+
+  -- sincronizador de 2 FFs para o cts, que vem de fora (assíncrono)
+  signal cts_sync0, cts_sync1 : std_logic := '1';
+
+begin
+
+  tx   <= tx_s;
+  busy <= busy_s;
+
+  sync_cts_proc : process (clock) is
+  begin
+    if rising_edge(clock) then
+      if reset_n = '0' then
+        cts_sync0 <= '1';
+        cts_sync1 <= '1';
+      else
+        cts_sync0 <= uart_cts_n;
+        cts_sync1 <= cts_sync0;
+      end if;
+    end if;
+  end process sync_cts_proc;
+
+  main : process (clock) is
+  begin
+    if rising_edge(clock) then
+
+      if reset_n = '0' then
+        state     <= idle_s;
+        tx_s      <= '1';
+        busy_s    <= '0';
+        shift_reg <= (others => '0');
+        bit_timer <= 0;
+
+      else
+        case state is
+
+          when idle_s =>
+            tx_s   <= '1';
+            busy_s <= '0';
+            if send = '1' then
+              shift_reg <= data_in;
+              busy_s    <= '1';
+              if cts_sync1 = '0' then
+                state     <= start_s;
+                bit_timer <= CLKS_PER_BIT - 1;
+              else
+                state <= wait_cts_s;
+              end if;
+            end if;
+
+          -- [FLOW CONTROL] segura aqui enquanto o peer não libera CTS;
+          -- não perde o byte pedido, só atrasa o início da transmissão
+          when wait_cts_s =>
+            busy_s <= '1';
+            if cts_sync1 = '0' then
+              state     <= start_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            end if;
+
+          when start_s =>
+            tx_s <= '0';                          -- start bit
+            if bit_timer = 0 then
+              state     <= bit0_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit0_s =>
+            tx_s <= shift_reg(0);
+            if bit_timer = 0 then
+              state     <= bit1_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit1_s =>
+            tx_s <= shift_reg(1);
+            if bit_timer = 0 then
+              state     <= bit2_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit2_s =>
+            tx_s <= shift_reg(2);
+            if bit_timer = 0 then
+              state     <= bit3_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit3_s =>
+            tx_s <= shift_reg(3);
+            if bit_timer = 0 then
+              state     <= bit4_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit4_s =>
+            tx_s <= shift_reg(4);
+            if bit_timer = 0 then
+              state     <= bit5_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit5_s =>
+            tx_s <= shift_reg(5);
+            if bit_timer = 0 then
+              state     <= bit6_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit6_s =>
+            tx_s <= shift_reg(6);
+            if bit_timer = 0 then
+              state     <= bit7_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when bit7_s =>
+            tx_s <= shift_reg(7);
+            if bit_timer = 0 then
+              state     <= stop_s;
+              bit_timer <= CLKS_PER_BIT - 1;
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when stop_s =>
+            tx_s <= '1';                          -- stop bit
+            if bit_timer = 0 then
+              state  <= idle_s;
+              busy_s <= '0';
+            else
+              bit_timer <= bit_timer - 1;
+            end if;
+
+          when others =>
+            state  <= idle_s;
+            busy_s <= '0';
+
+        end case;
+      end if;
+    end if;
+  end process main;
+
+end architecture rtl;

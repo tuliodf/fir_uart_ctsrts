@@ -1,0 +1,193 @@
+-------------------------------------------------------------------------------
+-- keys_sws_debounce.vhd
+--
+-- Debounce das KEYs (4 botões, ativo em '0') e SWs (18 chaves, ativo em '1')
+-- da placa DE2-115. Contém dois blocos neste único arquivo:
+--
+--   1) entity/architecture "debounce"          -> módulo genérico de debounce
+--                                                  para um único pino
+--   2) entity/architecture "keys_sws_debounce" -> instancia "debounce" para
+--                                                  cada KEY e cada SW via generate
+--
+-- Funcionamento do debounce (por pino):
+--   a) Sincroniza a entrada com 2 flip-flops (evita metaestabilidade, já que
+--      o sinal chega de forma assíncrona ao clock do sistema).
+--   b) Só atualiza a saída depois que o valor sincronizado permanecer estável
+--      por DEBOUNCE_CYCLES ciclos consecutivos, filtrando o "ruído" mecânico.
+--
+-- Observação sobre polaridade das KEYs:
+--   As KEYs da DE2-115 são ativas em '0' (pressionado = '0', solto = '1').
+--   O debounce trata o sinal BRUTO como ele chega no pino, sem inverter:
+--     key_out(N) = '0' => tecla N pressionada e estável
+--     key_out(N) = '1' => tecla N solta e estável
+--   Como consequência, key_fall (transição 1->0) é quem detecta o PRESSIONAR,
+--   e key_rise (transição 0->1) detecta o SOLTAR.
+--
+-- Tempos de debounce sugeridos (calculados como tempo * frequência_do_clock):
+--   KEYs (botão mecânico, mola)  : ~10ms  => DEBOUNCE_CYCLES = 500_000 @ 50MHz
+--   SWs  (chave deslizante)      : ~5ms   => DEBOUNCE_CYCLES = 250_000 @ 50MHz
+-------------------------------------------------------------------------------
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+-------------------------------------------------------------------------------
+-- 1) Módulo genérico de debounce para um único pino
+-------------------------------------------------------------------------------
+entity debounce is
+    generic (
+        DEBOUNCE_CYCLES : integer := 500000  -- ciclos de clock estável exigidos
+    );
+    port (
+        clk       : in  std_logic;
+        rst_n     : in  std_logic;  -- reset assíncrono, ativo em '0'
+        pin_in    : in  std_logic;  -- pino bruto, assíncrono (botão/chave)
+        pin_out   : out std_logic;  -- saída limpa, sincronizada e debounced
+        pin_rise  : out std_logic;  -- pulso de 1 ciclo na borda de subida detectada
+        pin_fall  : out std_logic   -- pulso de 1 ciclo na borda de descida detectada
+    );
+end entity debounce;
+
+architecture rtl of debounce is
+
+    -- sincronizador de 2 flip-flops
+    signal sync_ff1, sync_ff2 : std_logic := '0';
+
+    -- contador de estabilidade e estado atual/anterior da saída
+    signal counter    : unsigned(31 downto 0) := (others => '0');
+    signal pin_stable : std_logic := '0';
+    signal pin_prev   : std_logic := '0';
+
+begin
+
+    -- Estágio 1: sincronizador (protege contra metaestabilidade do sinal assíncrono)
+    process(clk, rst_n)
+    begin
+        if rst_n = '0' then
+            sync_ff1 <= '0';
+            sync_ff2 <= '0';
+        elsif rising_edge(clk) then
+            sync_ff1 <= pin_in;
+            sync_ff2 <= sync_ff1;
+        end if;
+    end process;
+
+    -- Estágio 2: contador de debounce
+    -- Reinicia sempre que o valor sincronizado mudar; só propaga para
+    -- pin_stable quando o contador atingir DEBOUNCE_CYCLES sem mudança.
+    process(clk, rst_n)
+    begin
+        if rst_n = '0' then
+            counter    <= (others => '0');
+            pin_stable <= '0';
+        elsif rising_edge(clk) then
+            if sync_ff2 /= pin_stable then
+                if counter >= to_unsigned(DEBOUNCE_CYCLES - 1, counter'length) then
+                    pin_stable <= sync_ff2;
+                    counter    <= (others => '0');
+                else
+                    counter <= counter + 1;
+                end if;
+            else
+                counter <= (others => '0');
+            end if;
+        end if;
+    end process;
+
+    -- Estágio 3: detecção de borda (opcional, útil para eventos de "clique" único)
+    process(clk, rst_n)
+    begin
+        if rst_n = '0' then
+            pin_prev <= '0';
+        elsif rising_edge(clk) then
+            pin_prev <= pin_stable;
+        end if;
+    end process;
+
+    pin_out  <= pin_stable;
+    pin_rise <= '1' when (pin_stable = '1' and pin_prev = '0') else '0';
+    pin_fall <= '1' when (pin_stable = '0' and pin_prev = '1') else '0';
+
+end architecture rtl;
+
+
+-------------------------------------------------------------------------------
+-- 2) Wrapper: instancia "debounce" para todas as KEYs e SWs da DE2-115
+-------------------------------------------------------------------------------
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity keys_sws_debounce is
+    generic (
+        NUM_KEYS             : integer := 4;
+        NUM_SWS              : integer := 18;
+        KEY_DEBOUNCE_CYCLES  : integer := 500000;  -- ~10ms @ 50MHz
+        SW_DEBOUNCE_CYCLES   : integer := 250000    -- ~5ms  @ 50MHz
+    );
+    port (
+        clk       : in  std_logic;
+        rst_n     : in  std_logic;  -- reset assíncrono, ativo em '0'
+
+        key_in    : in  std_logic_vector(NUM_KEYS-1 downto 0);  -- pino bruto das KEYs (ativo em '0')
+        sw_in     : in  std_logic_vector(NUM_SWS-1 downto 0);   -- pino bruto das SWs  (ativo em '1')
+
+        key_out   : out std_logic_vector(NUM_KEYS-1 downto 0);  -- KEYs debounced (mesma polaridade do pino)
+        key_rise  : out std_logic_vector(NUM_KEYS-1 downto 0);  -- ver nota de polaridade no cabeçalho
+        key_fall  : out std_logic_vector(NUM_KEYS-1 downto 0);
+
+        sw_out    : out std_logic_vector(NUM_SWS-1 downto 0);   -- SWs debounced
+        sw_rise   : out std_logic_vector(NUM_SWS-1 downto 0);
+        sw_fall   : out std_logic_vector(NUM_SWS-1 downto 0)
+    );
+end entity keys_sws_debounce;
+
+architecture rtl of keys_sws_debounce is
+
+    component debounce is
+        generic (
+            DEBOUNCE_CYCLES : integer := 500000
+        );
+        port (
+            clk       : in  std_logic;
+            rst_n     : in  std_logic;
+            pin_in    : in  std_logic;
+            pin_out   : out std_logic;
+            pin_rise  : out std_logic;
+            pin_fall  : out std_logic
+        );
+    end component;
+
+begin
+
+    gen_keys: for i in 0 to NUM_KEYS-1 generate
+        u_debounce_key: debounce
+            generic map (
+                DEBOUNCE_CYCLES => KEY_DEBOUNCE_CYCLES
+            )
+            port map (
+                clk      => clk,
+                rst_n    => rst_n,
+                pin_in   => key_in(i),
+                pin_out  => key_out(i),
+                pin_rise => key_rise(i),
+                pin_fall => key_fall(i)
+            );
+    end generate gen_keys;
+
+    gen_sws: for i in 0 to NUM_SWS-1 generate
+        u_debounce_sw: debounce
+            generic map (
+                DEBOUNCE_CYCLES => SW_DEBOUNCE_CYCLES
+            )
+            port map (
+                clk      => clk,
+                rst_n    => rst_n,
+                pin_in   => sw_in(i),
+                pin_out  => sw_out(i),
+                pin_rise => sw_rise(i),
+                pin_fall => sw_fall(i)
+            );
+    end generate gen_sws;
+
+end architecture rtl;

@@ -1,0 +1,139 @@
+--- Algoritmo para teste do LCD
+--- Edson manoel da silva
+
+
+ENTITY lcd_test IS
+	PORT
+		(
+		--//	Host Side
+		iCLK,iRST_N : IN STD_LOGIC;
+		--//	LCD Side
+		LCD_DATA : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)	;
+		LCD_RW,LCD_EN,LCD_RS : OUT STD_LOGIC;
+		);
+END ENTITY;
+
+ARCHITECTURE FUNCIONAMENTO OF lcd_test IS
+
+
+
+BEGIN
+
+
+always@(posedge iCLK or negedge iRST_N)
+begin
+	if(!iRST_N)
+	begin
+		LUT_INDEX	<=	0;
+		mLCD_ST		<=	0;
+		mDLY		<=	0;
+		mLCD_Start	<=	0;
+		mLCD_DATA	<=	0;
+		mLCD_RS		<=	0;
+	end
+	else
+	begin
+		if(LUT_INDEX<LUT_SIZE)
+		begin
+			case(mLCD_ST)
+			0:	begin
+					mLCD_DATA	<=	LUT_DATA[7:0];	-- PASSA O DADO A SER ESCRITO PARA O LCD
+					mLCD_RS		<=	LUT_DATA[8];	-- PASSA O SINAL DE RS(DENTRO DO CONTROLADOR ESSE SINAL APENAS É UM BYPASS)
+					mLCD_Start	<=	1;				-- INICIA O LCD
+					mLCD_ST		<=	1;				-- MUDA DE ESTADO
+				end
+			1:	begin
+					if(mLCD_Done)					-- SE O LCD RESPONDE
+					begin
+						mLCD_Start	<=	0;			-- BAIXA O SINAL DE START
+						mLCD_ST		<=	2;			-- MUDA O ESTADO			
+					end
+				end
+			2:	begin
+					if(mDLY<18'h3FFFE)
+					mDLY	<=	mDLY+1;
+					else
+					begin
+						mDLY	<=	0;
+						mLCD_ST	<=	3;
+					end
+				end
+			3:	begin
+					LUT_INDEX	<=	LUT_INDEX+1;
+					mLCD_ST	<=	0;
+				end
+			endcase
+		end
+	end
+end
+
+always
+begin
+	case(LUT_INDEX)
+	--//	Initial
+	LCD_INTIAL+0:	LUT_DATA	<=	9'h038;
+	LCD_INTIAL+1:	LUT_DATA	<=	9'h00C;
+	LCD_INTIAL+2:	LUT_DATA	<=	9'h001;
+	LCD_INTIAL+3:	LUT_DATA	<=	9'h006;
+	LCD_INTIAL+4:	LUT_DATA	<=	9'h080;
+	--//	Line 1
+	LCD_LINE1+0:	LUT_DATA	<=	9'h120;	--//	Welcome to the
+	LCD_LINE1+1:	LUT_DATA	<=	9'h157;
+	LCD_LINE1+2:	LUT_DATA	<=	9'h165;
+	LCD_LINE1+3:	LUT_DATA	<=	9'h16C;
+	LCD_LINE1+4:	LUT_DATA	<=	9'h163;
+	LCD_LINE1+5:	LUT_DATA	<=	9'h16F;
+	LCD_LINE1+6:	LUT_DATA	<=	9'h16D;
+	LCD_LINE1+7:	LUT_DATA	<=	9'h165;
+	LCD_LINE1+8:	LUT_DATA	<=	9'h120;
+	LCD_LINE1+9:	LUT_DATA	<=	9'h174;
+	LCD_LINE1+10:	LUT_DATA	<=	9'h16F;
+	LCD_LINE1+11:	LUT_DATA	<=	9'h120;
+	LCD_LINE1+12:	LUT_DATA	<=	9'h174;
+	LCD_LINE1+13:	LUT_DATA	<=	9'h168;
+	LCD_LINE1+14:	LUT_DATA	<=	9'h165;
+	LCD_LINE1+15:	LUT_DATA	<=	9'h120;
+	--//	Change Line
+	LCD_CH_LINE:	LUT_DATA	<=	9'h0C0;
+	--//	Line 2
+	LCD_LINE2+0:	LUT_DATA	<=	9'h120;	--//	Altera DE2-70
+	LCD_LINE2+1:	LUT_DATA	<=	9'h141;	
+	LCD_LINE2+2:	LUT_DATA	<=	9'h16C;
+	LCD_LINE2+3:	LUT_DATA	<=	9'h174;
+	LCD_LINE2+4:	LUT_DATA	<=	9'h165;
+	LCD_LINE2+5:	LUT_DATA	<=	9'h172;
+	LCD_LINE2+6:	LUT_DATA	<=	9'h161;
+	LCD_LINE2+7:	LUT_DATA	<=	9'h120;
+	LCD_LINE2+8:	LUT_DATA	<=	9'h144;
+	LCD_LINE2+9:	LUT_DATA	<=	9'h145;
+	LCD_LINE2+10:	LUT_DATA	<=	9'h132;
+	LCD_LINE2+11:	LUT_DATA	<=	9'h1B0;
+	LCD_LINE2+12:	LUT_DATA	<=	9'h131;
+	LCD_LINE2+13:	LUT_DATA	<=	9'h131;
+	LCD_LINE2+14:	LUT_DATA	<=	9'h135;
+	LCD_LINE2+15:	LUT_DATA	<=	9'h120;
+	default:		LUT_DATA	<=	9'h120;
+	endcase
+end
+
+LCD_Controller 		u0	(	//	Host Side
+							.iDATA(mLCD_DATA),
+							.iRS(mLCD_RS),
+							.iStart(mLCD_Start),
+							.oDone(mLCD_Done),
+							.iCLK(iCLK),
+							.iRST_N(iRST_N),
+							//	LCD Interface
+							.LCD_DATA(LCD_DATA),
+							.LCD_RW(LCD_RW),
+							.LCD_EN(LCD_EN),
+							.LCD_RS(LCD_RS)	);
+
+endmodule
+
+
+
+
+
+
+END ARCHITECTURE;

@@ -1,0 +1,135 @@
+-------------------------------------------------------------------------------
+-- uart_loopback_top.vhd
+--
+-- Top-level de PASSTHROUGH (loopback/eco): cada byte recebido em uart_rx e
+-- devolvido, sem alteracao, por uart_tx. Serve para testar o link fisico
+-- ponta a ponta (PC <-> FPGA), sem depender de nenhuma logica de protocolo
+-- adicional -- se o byte que volta bate com o que foi enviado, o link
+-- funcionou; se nao voltar nada (timeout) ou vier diferente, ha um problema
+-- de conexao/timing/nivel eletrico.
+--
+-- NAO instancia uart_top diretamente: o uart_top ja tem ACK/NAK embutido na
+-- sua propria logica de transmissao, e nao daria pra usar a mesma linha TX
+-- para eco e para ACK/NAK ao mesmo tempo. Este modulo reaproveita os
+-- mesmos blocos de baixo nivel (uart_receiver, uart_transmitter), mas com
+-- uma logica de topo diferente (eco em vez de ACK/NAK) -- e um "irmao" do
+-- uart_top, nao uma casca em volta dele.
+--
+-- Flow control: RTS combina DOIS motivos de espera -- o receptor ocupado
+-- recebendo um frame, E o transmissor ainda ocupado ecoando o byte
+-- anterior. Isso evita que um segundo byte chegue antes do eco do
+-- primeiro ter saido (nao ha buffer para 2 bytes neste modulo simples).
+--
+-- Em caso de framing_error, o modulo NAO ecoa nada -- o silencio
+-- (timeout do lado do PC) ja e o sinal de erro, sem precisar de um byte de
+-- erro dedicado.
+-------------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity uart_loopback_top is
+  generic (CLK_FREQ_HZ : integer := 50_000_000;
+           BAUD_RATE   : integer := 57_600);
+  port (clock            : in  std_logic;
+        reset_n          : in  std_logic;
+        uart_rx          : in  std_logic;
+        uart_tx          : out std_logic;
+        uart_rts_n       : out std_logic;
+        uart_cts_n       : in  std_logic;
+        -- expostos so para debug/monitoramento (ex.: LEDs), nao essenciais
+        rx_valid         : out std_logic;
+        rx_data          : out std_logic_vector(7 downto 0);
+        rx_framing_error : out std_logic);
+end entity uart_loopback_top;
+
+architecture rtl of uart_loopback_top is
+
+  signal rx_valid_s   : std_logic;
+  signal rx_data_s    : std_logic_vector(7 downto 0);
+  signal rx_framing_s : std_logic;
+  signal rx_busy_s     : std_logic;
+  signal rx_rts_unused : std_logic;  -- porta uart_rts_n do receptor, nao usada aqui
+
+  signal tx_send_s : std_logic;
+  signal tx_data_s : std_logic_vector(7 downto 0);
+  signal tx_busy_s  : std_logic;
+
+  component uart_receiver is
+    generic (CLK_FREQ_HZ : integer;
+             BAUD_RATE   : integer);
+    port (clock         : in  std_logic;
+          reset_n       : in  std_logic;
+          uart_rx       : in  std_logic;
+          uart_cts_n    : in  std_logic := '1';
+          uart_rts_n    : out std_logic;
+          valid         : out std_logic;
+          busy          : out std_logic;
+          framing_error : out std_logic;
+          received_data : out std_logic_vector(7 downto 0));
+  end component uart_receiver;
+
+  component uart_transmitter is
+    generic (CLK_FREQ_HZ : integer;
+             BAUD_RATE   : integer);
+    port (clock      : in  std_logic;
+          reset_n    : in  std_logic;
+          data_in    : in  std_logic_vector(7 downto 0);
+          send       : in  std_logic;
+          uart_cts_n : in  std_logic := '0';
+          tx         : out std_logic;
+          busy       : out std_logic);
+  end component uart_transmitter;
+
+begin
+
+  rx_valid         <= rx_valid_s;
+  rx_data           <= rx_data_s;
+  rx_framing_error  <= rx_framing_s;
+
+  -- [RTS COMBINADO] so libera ('0') quando o receptor NAO esta ocupado
+  -- recebendo E o transmissor NAO esta ocupado ecoando o byte anterior.
+  uart_rts_n <= '0' when (rx_busy_s = '0' and tx_busy_s = '0') else '1';
+
+  u_rx : uart_receiver
+    generic map (CLK_FREQ_HZ => CLK_FREQ_HZ,
+                 BAUD_RATE   => BAUD_RATE)
+    port map (clock         => clock,
+              reset_n       => reset_n,
+              uart_rx       => uart_rx,
+              uart_cts_n    => '1',            -- nao usado no lado RX
+              uart_rts_n    => rx_rts_unused,   -- ignorado; RTS real e o combinado acima
+              valid         => rx_valid_s,
+              busy          => rx_busy_s,
+              framing_error => rx_framing_s,
+              received_data => rx_data_s);
+
+  u_tx : uart_transmitter
+    generic map (CLK_FREQ_HZ => CLK_FREQ_HZ,
+                 BAUD_RATE   => BAUD_RATE)
+    port map (clock      => clock,
+              reset_n    => reset_n,
+              data_in    => tx_data_s,
+              send       => tx_send_s,
+              uart_cts_n => uart_cts_n,
+              tx         => uart_tx,
+              busy       => tx_busy_s);
+
+  -- [ECO] devolve exatamente o byte recebido; nao ecoa nada em framing_error
+  echo_proc : process (clock) is
+  begin
+    if rising_edge(clock) then
+      if reset_n = '1' then
+        tx_send_s <= '0';
+        tx_data_s <= (others => '0');
+      else
+        tx_send_s <= '0';  -- default: pulso de 1 ciclo
+        if rx_valid_s = '1' then
+          tx_data_s <= rx_data_s;
+          tx_send_s <= '1';
+        end if;
+      end if;
+    end if;
+  end process echo_proc;
+
+end architecture rtl;

@@ -1,0 +1,184 @@
+-------------------------------------------------------------------------------
+-- uart_receiver.vhd
+--
+-- Recebe frames UART 8N1 (1 start bit, 8 bits de dado LSB-first, 1 stop bit).
+--
+-- Sinais de robustez incluídos:
+--   - Sincronizador de 2 flip-flops para uart_rx (entrada assíncrona).
+--   - Verificação do stop bit: só valida o byte se o stop bit for '1';
+--     caso contrário, sinaliza framing_error e descarta o dado.
+--   - Qualquer estado não previsto retorna a idle_s (nunca trava).
+--   - Reset síncrono.
+--   - Sinal busy (frame em recepção) usado para controlar uart_rts_n.
+-------------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity uart_receiver is
+  generic (CLK_FREQ_HZ : integer := 50_000_000;
+           BAUD_RATE   : integer := 57_600);
+  port (clock         : in  std_logic;
+        reset_n       : in  std_logic;                      -- reset síncrono, ativo baixo
+        uart_rx       : in  std_logic;                       -- linha serial de entrada
+        uart_cts_n    : in  std_logic := '1';                -- entrada real do chip; não usada aqui (idle='1')
+        uart_rts_n    : out std_logic;                       -- saída: '0' = "pode mandar"
+        valid         : out std_logic;
+        busy          : out std_logic;
+        framing_error : out std_logic;
+        received_data : out std_logic_vector(7 downto 0));
+end entity uart_receiver;
+
+architecture str of uart_receiver is
+
+  type state_t is (idle_s, start_s, bit0_s, bit1_s, bit2_s, bit3_s,
+                    bit4_s, bit5_s, bit6_s, bit7_s, stop_s);
+  signal state : state_t := idle_s;
+
+  signal baudrate_out    : std_logic;
+  signal received_data_s : std_logic_vector(7 downto 0);
+  signal busy_s          : std_logic;
+
+  signal rx_sync0, rx_sync1 : std_logic := '1';
+  signal rx_s                : std_logic;
+
+  component sampler_generator is
+    generic (CLK_FREQ_HZ : integer;
+             BAUD_RATE   : integer);
+    port (clock        : in  std_logic;
+          uart_rx      : in  std_logic;
+          baudrate_out : out std_logic);
+  end component sampler_generator;
+
+begin  -- architecture str
+
+  sync_rx_proc : process (clock) is
+  begin
+    if rising_edge(clock) then
+      if reset_n = '0' then
+        rx_sync0 <= '1';
+        rx_sync1 <= '1';
+      else
+        rx_sync0 <= uart_rx;
+        rx_sync1 <= rx_sync0;
+      end if;
+    end if;
+  end process sync_rx_proc;
+  rx_s <= rx_sync1;
+
+  -- RTS ativo baixo: '0' = "pode mandar", '1' = "espera"
+  uart_rts_n <= '0' when busy_s = '0' else '1';
+  busy       <= busy_s;
+
+  sampler_generator_1 : sampler_generator
+    generic map (CLK_FREQ_HZ => CLK_FREQ_HZ,
+                 BAUD_RATE   => BAUD_RATE)
+    port map (clock        => clock,
+              uart_rx      => uart_rx,
+              baudrate_out => baudrate_out);
+
+  main : process (clock) is
+  begin  -- process main
+    if rising_edge(clock) then
+
+      if reset_n = '0' then
+        state           <= idle_s;
+        received_data_s <= (others => '0');
+        received_data   <= (others => '0');
+        valid           <= '0';
+        busy_s          <= '0';
+        framing_error   <= '0';
+
+      else
+        valid         <= '0';
+        framing_error <= '0';
+
+        case state is
+
+          when idle_s =>
+            busy_s <= '0';
+            if rx_s = '0' then
+              state  <= start_s;
+              busy_s <= '1';
+            end if;
+
+          when start_s =>
+            if baudrate_out = '1' then
+              if rx_s = '0' then
+                state <= bit0_s;
+              else
+                state  <= idle_s;
+                busy_s <= '0';
+              end if;
+            end if;
+
+          when bit0_s =>
+            if baudrate_out = '1' then
+              received_data_s(0) <= rx_s;
+              state              <= bit1_s;
+            end if;
+
+          when bit1_s =>
+            if baudrate_out = '1' then
+              received_data_s(1) <= rx_s;
+              state              <= bit2_s;
+            end if;
+
+          when bit2_s =>
+            if baudrate_out = '1' then
+              received_data_s(2) <= rx_s;
+              state              <= bit3_s;
+            end if;
+
+          when bit3_s =>
+            if baudrate_out = '1' then
+              received_data_s(3) <= rx_s;
+              state              <= bit4_s;
+            end if;
+
+          when bit4_s =>
+            if baudrate_out = '1' then
+              received_data_s(4) <= rx_s;
+              state              <= bit5_s;
+            end if;
+
+          when bit5_s =>
+            if baudrate_out = '1' then
+              received_data_s(5) <= rx_s;
+              state              <= bit6_s;
+            end if;
+
+          when bit6_s =>
+            if baudrate_out = '1' then
+              received_data_s(6) <= rx_s;
+              state              <= bit7_s;
+            end if;
+
+          when bit7_s =>
+            if baudrate_out = '1' then
+              received_data_s(7) <= rx_s;
+              state              <= stop_s;
+            end if;
+
+          when stop_s =>
+            if baudrate_out = '1' then
+              if rx_s = '1' then
+                valid         <= '1';
+                received_data <= received_data_s;
+              else
+                framing_error <= '1';
+              end if;
+              state  <= idle_s;
+              busy_s <= '0';
+            end if;
+
+          when others =>
+            state  <= idle_s;
+            busy_s <= '0';
+
+        end case;
+      end if;
+    end if;
+  end process main;
+
+end architecture str;

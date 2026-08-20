@@ -1,0 +1,5 @@
+v1
+DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,fir_trans:fir|mult:\gen_mult:0:U|lpm_mult:Mult0|mult_36t:auto_generated|mac_out2,
+DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,fir_trans:fir|mult:\gen_mult:1:U|lpm_mult:Mult0|mult_36t:auto_generated|mac_out2,
+DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,fir_trans:fir|mult:\gen_mult:2:U|lpm_mult:Mult0|mult_36t:auto_generated|mac_out2,
+DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,fir_trans:fir|mult:\gen_mult:3:U|lpm_mult:Mult0|mult_36t:auto_generated|mac_out2,

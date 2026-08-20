@@ -1,0 +1,82 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+package coefs_pkg is
+
+constant ntaps : integer := 65;
+constant dataw : integer := 16;
+
+type tap_array is array (0 to ntaps-1) of signed(dataw-1 downto 0);
+type mult_out_array is array (0 to ntaps-1) of signed(2*dataw-1 downto 0);
+
+constant coefs : tap_array :=
+(
+    0 => to_signed(8, 16),
+    1 => to_signed(15, 16),
+    2 => to_signed(24, 16),
+    3 => to_signed(33, 16),
+    4 => to_signed(42, 16),
+    5 => to_signed(51, 16),
+    6 => to_signed(57, 16),
+    7 => to_signed(57, 16),
+    8 => to_signed(49, 16),
+    9 => to_signed(30, 16),
+    10 => to_signed(-2, 16),
+    11 => to_signed(-47, 16),
+    12 => to_signed(-104, 16),
+    13 => to_signed(-170, 16),
+    14 => to_signed(-238, 16),
+    15 => to_signed(-300, 16),
+    16 => to_signed(-347, 16),
+    17 => to_signed(-368, 16),
+    18 => to_signed(-351, 16),
+    19 => to_signed(-288, 16),
+    20 => to_signed(-170, 16),
+    21 => to_signed(5, 16),
+    22 => to_signed(238, 16),
+    23 => to_signed(525, 16),
+    24 => to_signed(855, 16),
+    25 => to_signed(1214, 16),
+    26 => to_signed(1585, 16),
+    27 => to_signed(1948, 16),
+    28 => to_signed(2282, 16),
+    29 => to_signed(2566, 16),
+    30 => to_signed(2783, 16),
+    31 => to_signed(2920, 16),
+    32 => to_signed(2966, 16),
+    33 => to_signed(2920, 16),
+    34 => to_signed(2783, 16),
+    35 => to_signed(2566, 16),
+    36 => to_signed(2282, 16),
+    37 => to_signed(1948, 16),
+    38 => to_signed(1585, 16),
+    39 => to_signed(1214, 16),
+    40 => to_signed(855, 16),
+    41 => to_signed(525, 16),
+    42 => to_signed(238, 16),
+    43 => to_signed(5, 16),
+    44 => to_signed(-170, 16),
+    45 => to_signed(-288, 16),
+    46 => to_signed(-351, 16),
+    47 => to_signed(-368, 16),
+    48 => to_signed(-347, 16),
+    49 => to_signed(-300, 16),
+    50 => to_signed(-238, 16),
+    51 => to_signed(-170, 16),
+    52 => to_signed(-104, 16),
+    53 => to_signed(-47, 16),
+    54 => to_signed(-2, 16),
+    55 => to_signed(30, 16),
+    56 => to_signed(49, 16),
+    57 => to_signed(57, 16),
+    58 => to_signed(57, 16),
+    59 => to_signed(51, 16),
+    60 => to_signed(42, 16),
+    61 => to_signed(33, 16),
+    62 => to_signed(24, 16),
+    63 => to_signed(15, 16),
+    64 => to_signed(8, 16)
+);
+
+end package;

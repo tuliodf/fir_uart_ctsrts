@@ -1,0 +1,61 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+library work;
+use work.coefs_pkg.all;
+
+entity fir_trans is port(
+	clk			: in  std_logic;
+	vld			: in  std_logic;
+	rst			: in  std_logic;
+	sample_in	: in 	signed(dataw-1 downto 0);
+	sample_out	: out signed(dataw-1 downto 0));
+	
+end entity;
+	
+architecture rtl of fir_trans is 
+
+	signal coef_in: tap_array := coefs;--(others => (others => '0')); --(others => ("0000000000000000"));
+	signal mult_out: mult_out_array := (others => (others => '0')); --(others => ("0000000000000000"));
+	signal sum: mult_out_array := (others => (others => '0')); --(others => ("0000000000000000"));
+	signal reg_z: mult_out_array := (others => (others => '0')); --(others => ("0000000000000000"));
+
+begin
+--coef_in <= coefs;
+	gen_mult: for i in 0 to ntaps-1 generate
+		U: entity work.mult
+		port map(
+			x => sample_in,
+			y => coef_in(i),
+			z => mult_out(i));
+			end generate;
+		
+	gen_sum: for i in 0 to ntaps-1 generate
+		first: if i = 0 generate
+			sum(0) <= mult_out(0);
+		end generate first;
+			
+		other: if i > 0 generate
+			sum(i) <= mult_out(i) + reg_z(i-1);
+		end generate other;
+	end generate;
+		process(clk, rst)
+			begin
+				if rst = '1' then 
+					reg_z <= (others => (others => '0')); 
+				elsif rising_edge(clk) then
+					if vld = '1' then
+					  for i in 0 to ntaps-1 loop
+							reg_z(i) <= sum(i);
+					  end loop;
+					end if;
+				end if;
+		end process;
+	sample_out <= sum(ntaps-1)(2*dataw-2 downto dataw-1);
+end architecture;
+		
+		
+		
+		
+		

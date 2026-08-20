@@ -1,0 +1,2 @@
+Projeo referëncia para outros projetos com a placa DE2-115
+Nele foram implementados a interface com os displays de 7 segmentos, display LCD e codec de Audio.

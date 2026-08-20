@@ -1,0 +1,125 @@
+-------------------------------------------------------------------------------
+-- uart_top.vhd
+--
+-- Integra uart_receiver + uart_transmitter com handshake RTS/CTS completo,
+-- e um protocolo simples de confirmação: a cada byte recebido, responde
+-- automaticamente com ACK (0x06) se o stop bit for válido, ou NAK (0x15)
+-- se houver framing_error.
+--
+-- Pinos (nomenclatura igual à tabela 4-18 do manual da DE2-115):
+--   uart_rx    -> PIN_G12  (entrada)
+--   uart_tx    -> PIN_G9   (saída)
+--   uart_rts_n -> PIN_J13  (saída: este dispositivo avisa se pode receber)
+--   uart_cts_n -> PIN_G14  (entrada: peer avisa se pode receber)
+-------------------------------------------------------------------------------
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity uart_top is
+  generic (CLK_FREQ_HZ : integer := 50_000_000;
+           BAUD_RATE   : integer := 57_600);
+  port (clock         : in  std_logic;
+        reset_n       : in  std_logic;
+        uart_rx       : in  std_logic;
+        uart_tx       : out std_logic;
+        uart_rts_n    : out std_logic;
+        uart_cts_n    : in  std_logic;
+        -- expostos para o restante do sistema (ex.: FSM de carga de coeficientes)
+        rx_valid      : out std_logic;
+        rx_data       : out std_logic_vector(7 downto 0);
+        rx_framing_error : out std_logic);
+end entity uart_top;
+
+architecture rtl of uart_top is
+
+  constant ACK_BYTE : std_logic_vector(7 downto 0) := x"06";
+  constant NAK_BYTE : std_logic_vector(7 downto 0) := x"15";
+
+  signal rx_valid_s   : std_logic;
+  signal rx_data_s    : std_logic_vector(7 downto 0);
+  signal rx_framing_s : std_logic;
+  signal rx_busy_s     : std_logic;
+
+  signal tx_send_s : std_logic;
+  signal tx_data_s : std_logic_vector(7 downto 0);
+  signal tx_busy_s  : std_logic;
+
+  component uart_receiver is
+    generic (CLK_FREQ_HZ : integer;
+             BAUD_RATE   : integer);
+    port (clock         : in  std_logic;
+          reset_n       : in  std_logic;
+          uart_rx       : in  std_logic;
+          uart_cts_n    : in  std_logic := '1';
+          uart_rts_n    : out std_logic;
+          valid         : out std_logic;
+          busy          : out std_logic;
+          framing_error : out std_logic;
+          received_data : out std_logic_vector(7 downto 0));
+  end component uart_receiver;
+
+  component uart_transmitter is
+    generic (CLK_FREQ_HZ : integer;
+             BAUD_RATE   : integer);
+    port (clock      : in  std_logic;
+          reset_n    : in  std_logic;
+          data_in    : in  std_logic_vector(7 downto 0);
+          send       : in  std_logic;
+          uart_cts_n : in  std_logic := '0';
+          tx         : out std_logic;
+          busy       : out std_logic);
+  end component uart_transmitter;
+
+begin
+
+  rx_valid         <= rx_valid_s;
+  rx_data           <= rx_data_s;
+  rx_framing_error  <= rx_framing_s;
+
+  u_rx : uart_receiver
+    generic map (CLK_FREQ_HZ => CLK_FREQ_HZ,
+                 BAUD_RATE   => BAUD_RATE)
+    port map (clock         => clock,
+              reset_n       => reset_n,
+              uart_rx       => uart_rx,
+              uart_cts_n    => '1',       -- não usado no lado RX deste projeto
+              uart_rts_n    => uart_rts_n,
+              valid         => rx_valid_s,
+              busy          => rx_busy_s,
+              framing_error => rx_framing_s,
+              received_data => rx_data_s);
+
+  u_tx : uart_transmitter
+    generic map (CLK_FREQ_HZ => CLK_FREQ_HZ,
+                 BAUD_RATE   => BAUD_RATE)
+    port map (clock      => clock,
+              reset_n    => reset_n,
+              data_in    => tx_data_s,
+              send       => tx_send_s,
+              uart_cts_n => uart_cts_n,
+              tx         => uart_tx,
+              busy       => tx_busy_s);
+
+  -- [ACK/NAK] Gera automaticamente a resposta de 1 byte após cada frame
+  -- recebido, conforme discutido: ACK se stop bit válido, NAK se framing_error.
+  ack_nak_proc : process (clock) is
+  begin
+    if rising_edge(clock) then
+      if reset_n = '0' then
+        tx_send_s <= '0';
+        tx_data_s <= (others => '0');
+      else
+        tx_send_s <= '0';  -- default: pulso de 1 ciclo
+        if rx_valid_s = '1' then
+          tx_data_s <= ACK_BYTE;
+          tx_send_s <= '1';
+        elsif rx_framing_s = '1' then
+          tx_data_s <= NAK_BYTE;
+          tx_send_s <= '1';
+        end if;
+      end if;
+    end if;
+  end process ack_nak_proc;
+
+end architecture rtl;

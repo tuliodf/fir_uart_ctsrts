@@ -1,0 +1,177 @@
+--- CÓDIGO PADRÃO PARA A PLACA DE2_115 IMPLEMENTADO POR EDSON MANOEL DA SILVA
+
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+
+ENTITY DE2_115 IS
+	PORT
+		(
+		--//////////// CLOCK //////////
+			CLOCK_50 : IN STD_LOGIC;
+			CLOCK2_50: IN STD_LOGIC;
+			CLOCK3_50: IN STD_LOGIC;
+		--//////////// Sma //////////
+			SMA_CLKIN : IN STD_LOGIC;
+			SMA_CLKOUT: OUT STD_LOGIC;
+		--//////////// LED //////////
+			LEDG	   : OUT STD_LOGIC_VECTOR(8 DOWNTO 0);
+			LEDR	   : OUT STD_LOGIC_VECTOR(17 DOWNTO 0);
+		--//////////// KEY //////////
+			KEY		   : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+		--//////////// EX_IO //////////
+			EX_IO	   : inout STD_LOGIC_VECTOR(6 DOWNTO 0);
+		--//////////// SW //////////
+			SW		   : IN	STD_LOGIC_VECTOR(17 DOWNTO 0);
+
+		--//////////// SEG7 //////////
+			HEX0	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX1	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX2	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX3	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX4	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX5	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX6	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX7	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+			HEX8	   : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+		--//////////// LCD //////////
+			LCD_BLON	: OUT STD_LOGIC;
+			LCD_DATA	: inout STD_LOGIC_VECTOR(7 DOWNTO 0);
+			LCD_EN 		: OUT STD_LOGIC;
+			LCD_ON		: OUT STD_LOGIC;
+			LCD_RS		: OUT STD_LOGIC;
+			LCD_RW		: OUT STD_LOGIC;
+			
+		--//////////// RS232 //////////
+			UART_CTS	: OUT STD_LOGIC;
+			UART_RTS	: IN  STD_LOGIC;
+			UART_RXD	: IN  STD_LOGIC;
+			UART_TXD	: OUT STD_LOGIC;
+		--//////////// PS2 for Keyboard and Mouse //////////
+			PS2_CLK		: inout STD_LOGIC;
+			PS2_CLK2	: inout STD_LOGIC;
+			PS2_DAT 	: inout STD_LOGIC;
+			PS2_DAT2 	: inout STD_LOGIC;
+		--//////////// SDCARD //////////
+			SD_CLK		: OUT	STD_LOGIC;
+			SD_CMD		: inout STD_LOGIC;
+			SD_DAT		: inout STD_LOGIC_VECTOR(3 DOWNTO 0);
+			SD_WP_N		: IN 	STD_LOGIC;
+		--//////////// VGA //////////
+			VGA_B		: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+			VGA_BLANK_N	: OUT STD_LOGIC;
+			VGA_CLK		: OUT STD_LOGIC;
+			VGA_G		: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+			VGA_HS		: OUT STD_LOGIC;
+			VGA_R		: OUT STD_LOGIC_VECTOR(7 DOWNTO 0);
+			VGA_SYNC_N	: OUT STD_LOGIC;
+			VGA_VS		: OUT STD_LOGIC;
+
+		--//////////// Audio //////////
+			AUD_ADCDAT	: IN STD_LOGIC;
+			AUD_ADCLRCK	: inout STD_LOGIC;
+			AUD_BCLK	: inout STD_LOGIC;
+			AUD_DACDAT	: OUT STD_LOGIC;
+			AUD_DACLRCK	: inout STD_LOGIC_VECTOR;
+			AUD_XCK		: OUT STD_LOGIC;
+
+		--//////////// I2C for EEPROM //////////
+			EEP_I2C_SCLK: OUT STD_LOGIC;
+			EEP_I2C_SDAT: inout STD_LOGIC;
+
+		--//////////// I2C for Audio Tv-Decoder  //////////
+			I2C_SCLK	: OUT STD_LOGIC;
+			I2C_SDAT 	: inout STD_LOGIC;
+
+		--//////////// Ethernet 0 //////////
+			ENET0_GTX_CLK: OUT STD_LOGIC;
+			ENET0_INT_N	 : IN  STD_LOGIC;
+			ENET0_LINK100: IN  STD_LOGIC;
+			ENET0_MDC	 : OUT STD_LOGIC;
+			ENET0_MDIO	 : inout STD_LOGIC;
+			ENET0_RST_N	 : OUT	STD_LOGIC;
+			ENET0_RX_CLK : IN STD_LOGIC;
+			ENET0_RX_COL : IN STD_LOGIC;
+			ENET0_RX_CRS : IN STD_LOGIC;
+			ENET0_RX_DATA: IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+			ENET0_RX_DV	 : IN STD_LOGIC;
+			ENET0_RX_ER	 : IN STD_LOGIC;
+			ENET0_TX_CLK : IN STD_LOGIC;
+			ENET0_TX_DATA: OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+			ENET0_TX_EN	 : OUT STD_LOGIC;
+			ENET0_TX_ER	 : OUT STD_LOGIC;
+			ENETCLK_25	 : IN STD_LOGIC;
+
+		--//////////// Ethernet 1 //////////
+			ENET1_GTX_CLK: OUT STD_LOGIC;
+			ENET1_INT_N	 : IN  STD_LOGIC;
+			ENET1_LINK100: IN  STD_LOGIC;
+			ENET1_MDC	 : OUT STD_LOGIC;
+			ENET1_MDIO	 : inout STD_LOGIC;
+			ENET1_RST_N	 : OUT STD_LOGIC;
+			ENET1_RX_CLK : IN STD_LOGIC;
+			ENET1_RX_COL : IN STD_LOGIC;
+			ENET1_RX_CRS : IN STD_LOGIC;
+			ENET1_RX_DATA: IN STD_LOGIC;
+			ENET1_RX_DV	 : IN STD_LOGIC;
+			ENET1_RX_ER	 : IN STD_LOGIC;
+			ENET1_TX_CLK : IN STD_LOGIC;
+			ENET1_TX_DATA: OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+			ENET1_TX_EN	 : OUT STD_LOGIC;
+			ENET1_TX_ER	 : OUT STD_LOGIC;
+
+//////////// TV Decoder //////////
+			TD_CLK27	: IN STD_LOGIC;
+			TD_DATA		: IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+			TD_HS		: IN STD_LOGIC;
+			TD_RESET_N	: OUT STD_LOGIC;
+			TD_VS		: IN STD_LOGIC;
+
+//////////// USB 2.0 OTG //////////
+			output		     [1:0]		OTG_ADDR;
+			output		          		OTG_CS_N;
+			output		     [1:0]		OTG_DACK_N;
+			inout 		    [15:0]		OTG_DATA;
+			input 		     [1:0]		OTG_DREQ;
+			inout 		          		OTG_FSPEED;
+			input 		     [1:0]		OTG_INT;
+			inout 		          		OTG_LSPEED;
+			output		          		OTG_RD_N;
+			output		          		OTG_RST_N;
+			output		          		OTG_WE_N;
+
+//////////// IR Receiver //////////
+			input 		          		IRDA_RXD;
+
+//////////// SDRAM //////////
+			output		    [12:0]		DRAM_ADDR;
+			output		    [1:0]		DRAM_BA;
+			output		          		DRAM_CAS_N;
+			output		          		DRAM_CKE;
+			output		          		DRAM_CLK;
+			output		          		DRAM_CS_N;
+			inout 		    [31:0]		DRAM_DQ;
+			output		     [3:0]		DRAM_DQM;
+			output		          		DRAM_RAS_N;
+			output		          		DRAM_WE_N;
+
+//////////// SRAM //////////
+			output		    [19:0]		SRAM_ADDR;
+			output		          		SRAM_CE_N;
+			inout 		    [15:0]		SRAM_DQ;
+			output		          		SRAM_LB_N;
+			output		          		SRAM_OE_N;
+			output		          		SRAM_UB_N;
+			output		          		SRAM_WE_N;
+
+//////////// Flash //////////
+			output		    [22:0]		FL_ADDR;
+			output		          		FL_CE_N;
+			inout 		     [7:0]		FL_DQ;
+			output		          		FL_OE_N;
+			output		          		FL_RST_N;
+			input 		          		FL_RY;
+			output		          		FL_WE_N;
+			output		          		FL_WP_N;
+
+		);
+END ENTITY;

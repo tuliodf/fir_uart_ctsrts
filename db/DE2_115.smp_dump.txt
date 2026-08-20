@@ -1,0 +1,44 @@
+
+State Machine - |DE2_115|word_rx:u_word_rx|estado
+Name estado.done estado.recebeL estado.recebeH 
+estado.recebeH 0 0 0 
+estado.recebeL 0 1 1 
+estado.done 1 0 1 
+
+State Machine - |DE2_115|uart_top:u_uart_top|uart_transmitter:u_tx|state
+Name state.stop_s state.bit7_s state.bit6_s state.bit5_s state.bit4_s state.bit3_s state.bit2_s state.bit1_s state.bit0_s state.start_s state.wait_cts_s state.idle_s 
+state.idle_s 0 0 0 0 0 0 0 0 0 0 0 0 
+state.wait_cts_s 0 0 0 0 0 0 0 0 0 0 1 1 
+state.start_s 0 0 0 0 0 0 0 0 0 1 0 1 
+state.bit0_s 0 0 0 0 0 0 0 0 1 0 0 1 
+state.bit1_s 0 0 0 0 0 0 0 1 0 0 0 1 
+state.bit2_s 0 0 0 0 0 0 1 0 0 0 0 1 
+state.bit3_s 0 0 0 0 0 1 0 0 0 0 0 1 
+state.bit4_s 0 0 0 0 1 0 0 0 0 0 0 1 
+state.bit5_s 0 0 0 1 0 0 0 0 0 0 0 1 
+state.bit6_s 0 0 1 0 0 0 0 0 0 0 0 1 
+state.bit7_s 0 1 0 0 0 0 0 0 0 0 0 1 
+state.stop_s 1 0 0 0 0 0 0 0 0 0 0 1 
+
+State Machine - |DE2_115|uart_top:u_uart_top|uart_receiver:u_rx|state
+Name state.stop_s state.bit7_s state.bit6_s state.bit5_s state.bit4_s state.bit3_s state.bit2_s state.bit1_s state.bit0_s state.start_s state.idle_s 
+state.idle_s 0 0 0 0 0 0 0 0 0 0 0 
+state.start_s 0 0 0 0 0 0 0 0 0 1 1 
+state.bit0_s 0 0 0 0 0 0 0 0 1 0 1 
+state.bit1_s 0 0 0 0 0 0 0 1 0 0 1 
+state.bit2_s 0 0 0 0 0 0 1 0 0 0 1 
+state.bit3_s 0 0 0 0 0 1 0 0 0 0 1 
+state.bit4_s 0 0 0 0 1 0 0 0 0 0 1 
+state.bit5_s 0 0 0 1 0 0 0 0 0 0 1 
+state.bit6_s 0 0 1 0 0 0 0 0 0 0 1 
+state.bit7_s 0 1 0 0 0 0 0 0 0 0 1 
+state.stop_s 1 0 0 0 0 0 0 0 0 0 1 
+
+State Machine - |DE2_115|audio_codec_controller:AUDIO_CODEC_INST|currentState
+Name currentState.stop currentState.incrementMuxSelectBits currentState.turnOffi2cControl currentState.checkAcknowledge currentState.transmit currentState.resetState 
+currentState.resetState 0 0 0 0 0 0 
+currentState.transmit 0 0 0 0 1 1 
+currentState.checkAcknowledge 0 0 0 1 0 1 
+currentState.turnOffi2cControl 0 0 1 0 0 1 
+currentState.incrementMuxSelectBits 0 1 0 0 0 1 
+currentState.stop 1 0 0 0 0 1 

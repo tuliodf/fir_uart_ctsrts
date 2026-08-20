@@ -1,0 +1,91 @@
+#**************************************************************
+# This .sdc file is created by Terasic Tool.
+# Users are recommended to modify this file to match users logic.
+#**************************************************************
+
+#**************************************************************
+# Create Clock
+#**************************************************************
+create_clock -period 20 [get_ports CLOCK_50]
+create_clock -period 20 [get_ports CLOCK2_50]
+create_clock -period 20 [get_ports CLOCK3_50]
+
+#**************************************************************
+# Create Generated Clock
+#**************************************************************
+derive_pll_clocks
+
+
+
+#**************************************************************
+# Set Clock Latency
+#**************************************************************
+
+
+
+#**************************************************************
+# Set Clock Uncertainty
+#**************************************************************
+derive_clock_uncertainty
+
+
+
+#**************************************************************
+# Set Input Delay
+#**************************************************************
+
+
+
+#**************************************************************
+# Set Output Delay
+#**************************************************************
+
+
+
+#**************************************************************
+# Set Clock Groups
+#**************************************************************
+
+
+
+#**************************************************************
+# Set False Path
+#**************************************************************
+set_false_path -to [get_ports {LEDR}]
+
+
+#**************************************************************
+# Set Multicycle Path
+#**************************************************************
+set_multicycle_path -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|cont2[0] audio_codec_controller:AUDIO_CODEC_INST|cont2[1] audio_codec_controller:AUDIO_CODEC_INST|cont2[2] audio_codec_controller:AUDIO_CODEC_INST|cont2[3] audio_codec_controller:AUDIO_CODEC_INST|cont2[4] audio_codec_controller:AUDIO_CODEC_INST|cont2[5] audio_codec_controller:AUDIO_CODEC_INST|cont2[6] audio_codec_controller:AUDIO_CODEC_INST|cont2[7] audio_codec_controller:AUDIO_CODEC_INST|cont2[8] audio_codec_controller:AUDIO_CODEC_INST|cont2[9] audio_codec_controller:AUDIO_CODEC_INST|cont2[10] audio_codec_controller:AUDIO_CODEC_INST|cont2[11] audio_codec_controller:AUDIO_CODEC_INST|cont2[12] audio_codec_controller:AUDIO_CODEC_INST|cont2[13] audio_codec_controller:AUDIO_CODEC_INST|cont2[14] audio_codec_controller:AUDIO_CODEC_INST|cont2[15] audio_codec_controller:AUDIO_CODEC_INST|cont2[16] audio_codec_controller:AUDIO_CODEC_INST|cont2[17] audio_codec_controller:AUDIO_CODEC_INST|cont2[18] audio_codec_controller:AUDIO_CODEC_INST|cont2[19] audio_codec_controller:AUDIO_CODEC_INST|cont2[20] audio_codec_controller:AUDIO_CODEC_INST|cont2[21] audio_codec_controller:AUDIO_CODEC_INST|cont2[22] audio_codec_controller:AUDIO_CODEC_INST|cont2[23]}] -hold -start 1
+set_multicycle_path -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|cont2[0] audio_codec_controller:AUDIO_CODEC_INST|cont2[1] audio_codec_controller:AUDIO_CODEC_INST|cont2[2] audio_codec_controller:AUDIO_CODEC_INST|cont2[3] audio_codec_controller:AUDIO_CODEC_INST|cont2[4] audio_codec_controller:AUDIO_CODEC_INST|cont2[5] audio_codec_controller:AUDIO_CODEC_INST|cont2[6] audio_codec_controller:AUDIO_CODEC_INST|cont2[7] audio_codec_controller:AUDIO_CODEC_INST|cont2[8] audio_codec_controller:AUDIO_CODEC_INST|cont2[9] audio_codec_controller:AUDIO_CODEC_INST|cont2[10] audio_codec_controller:AUDIO_CODEC_INST|cont2[11] audio_codec_controller:AUDIO_CODEC_INST|cont2[12] audio_codec_controller:AUDIO_CODEC_INST|cont2[13] audio_codec_controller:AUDIO_CODEC_INST|cont2[14] audio_codec_controller:AUDIO_CODEC_INST|cont2[15] audio_codec_controller:AUDIO_CODEC_INST|cont2[16] audio_codec_controller:AUDIO_CODEC_INST|cont2[17] audio_codec_controller:AUDIO_CODEC_INST|cont2[18] audio_codec_controller:AUDIO_CODEC_INST|cont2[19] audio_codec_controller:AUDIO_CODEC_INST|cont2[20] audio_codec_controller:AUDIO_CODEC_INST|cont2[21] audio_codec_controller:AUDIO_CODEC_INST|cont2[22] audio_codec_controller:AUDIO_CODEC_INST|cont2[23]}] -setup -end 2
+set_multicycle_path -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|LEFT_MODE_SM audio_codec_controller:AUDIO_CODEC_INST|adcLRSelect audio_codec_controller:AUDIO_CODEC_INST|dacData}] -setup -end 1
+set_multicycle_path -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|LEFT_MODE_SM audio_codec_controller:AUDIO_CODEC_INST|adcLRSelect audio_codec_controller:AUDIO_CODEC_INST|dacData}] -hold -start 1
+set_multicycle_path -from [get_registers {RESET_DELAY:INST_DELAY_RESET|oRESET}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|dacData}] -setup -end 2
+set_multicycle_path -from [get_registers {RESET_DELAY:INST_DELAY_RESET|oRESET}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|dacData}] -hold -start 2
+set_multicycle_path -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|dacLRSelect}] -setup -end 2
+set_multicycle_path -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|dacLRSelect}] -hold -start 1
+#**************************************************************
+# Set Maximum Delay
+#**************************************************************
+#set_max_delay -from [get_registers {audio_codec_controller:AUDIO_CODEC_INST|delayCounter:adcDacControllerStartDelay|resetAdc}] -to [get_registers {audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[0] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[1] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[2] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[3] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[4] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[5] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[6] audio_codec_controller:AUDIO_CODEC_INST|bitClockCounter[7] audio_codec_controller:AUDIO_CODEC_INST|internalBitClock}] 5
+
+
+#**************************************************************
+# Set Minimum Delay
+#**************************************************************
+
+
+
+#**************************************************************
+# Set Input Transition
+#**************************************************************
+
+
+
+#**************************************************************
+# Set Load
+#**************************************************************
+
+
+

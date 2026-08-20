@@ -1,0 +1,71 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity word_rx is port(
+    clk				: in  std_logic;
+    rst        	: in  std_logic;
+	 
+    uart_rx    	: in  std_logic;
+	 uart_cts   	: out std_logic;
+	 
+	 word_ready 	: out std_logic;
+    word       	: out std_logic_vector(15 downto 0));
+end entity;
+
+architecture rtl of word_rx is
+    type state_t is (recebeH, recebeL, done);
+    signal estado    : state_t := recebeH;
+    signal rx_data   : std_logic_vector(7 downto 0);
+    signal word_done : std_logic;
+    signal valid     : std_logic;
+begin
+
+    word_ready <= word_done;
+
+    u_rx : entity work.uart_receiver
+    port map(
+        clock         => clk,
+		  reset_n		 => rst,
+        uart_rx       => uart_rx,
+		  uart_cts_n      => uart_cts,
+		  
+        valid         => valid,
+		  
+--		  busy          => busy,
+--		  framing_error => framing_error,
+		  
+		  
+        received_data => rx_data
+    );
+
+process(clk)
+begin
+    if rising_edge(clk) then
+        if rst = '1' then
+            estado    <= recebeH;
+            word_done <= '0';
+        else
+            word_done <= '0';
+
+            case estado is
+                when recebeH =>
+                    if valid = '1' then
+                        word(15 downto 8) <= rx_data;
+                        estado <= recebeL;
+                    end if;
+
+                when recebeL =>
+                    if valid = '1' then
+                        word(7 downto 0) <= rx_data;
+                        estado <= done;
+                    end if;
+
+                when done =>
+                    word_done <= '1';
+                    estado    <= recebeH;   -- avança sozinho, sem precisar de mais um byte
+            end case;
+        end if;
+    end if;
+end process;
+
+end architecture;
